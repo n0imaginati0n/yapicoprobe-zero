@@ -11,14 +11,11 @@
 
 // pico_cmake_set PICO_PLATFORM=rp2040
 
-// This header may be included by other board headers as "boards/pico.h".
-// But normally this is included via "#include <pico/stdlib.h>" if PICO_BOARD is set accordingly.
-
-#ifndef _BOARDS_PICO_H
-#define _BOARDS_PICO_H
+#ifndef _BOARDS_WAVESHARE_RP2040_ZERO_H
+#define _BOARDS_WAVESHARE_RP2040_ZERO_H
 
 // For board detection
-#define RASPBERRYPI_PICO
+#define WAVESHARE_RP2040_ZERO
 
 // --- UART ---
 #ifndef PICO_DEFAULT_UART
@@ -31,74 +28,59 @@
 #define PICO_DEFAULT_UART_RX_PIN 1
 #endif
 
-// --- LED ---
-#ifndef PICO_DEFAULT_LED_PIN
-#define PICO_DEFAULT_LED_PIN 25
+// --- WS2812 ---
+#ifndef PICO_DEFAULT_WS2812_PIN
+#define PICO_DEFAULT_WS2812_PIN 16
 #endif
-// no PICO_DEFAULT_WS2812_PIN
 
 // --- I2C ---
 #ifndef PICO_DEFAULT_I2C
-#define PICO_DEFAULT_I2C 0
+#define PICO_DEFAULT_I2C 1
 #endif
 #ifndef PICO_DEFAULT_I2C_SDA_PIN
-#define PICO_DEFAULT_I2C_SDA_PIN 4
+#define PICO_DEFAULT_I2C_SDA_PIN 6
 #endif
 #ifndef PICO_DEFAULT_I2C_SCL_PIN
-#define PICO_DEFAULT_I2C_SCL_PIN 5
+#define PICO_DEFAULT_I2C_SCL_PIN 7
 #endif
 
 // --- SPI ---
 #ifndef PICO_DEFAULT_SPI
-#define PICO_DEFAULT_SPI 0
+#define PICO_DEFAULT_SPI 1
 #endif
 #ifndef PICO_DEFAULT_SPI_SCK_PIN
-#define PICO_DEFAULT_SPI_SCK_PIN 18
+#define PICO_DEFAULT_SPI_SCK_PIN 10
 #endif
 #ifndef PICO_DEFAULT_SPI_TX_PIN
-#define PICO_DEFAULT_SPI_TX_PIN 19
+#define PICO_DEFAULT_SPI_TX_PIN 11
 #endif
 #ifndef PICO_DEFAULT_SPI_RX_PIN
-#define PICO_DEFAULT_SPI_RX_PIN 16
+#define PICO_DEFAULT_SPI_RX_PIN 12
 #endif
 #ifndef PICO_DEFAULT_SPI_CSN_PIN
-#define PICO_DEFAULT_SPI_CSN_PIN 17
+#define PICO_DEFAULT_SPI_CSN_PIN 13
 #endif
 
 // --- FLASH ---
-
 #define PICO_BOOT_STAGE2_CHOOSE_W25Q080 1
 
 #ifndef PICO_FLASH_SPI_CLKDIV
-#define PICO_FLASH_SPI_CLKDIV 2
+#define PICO_FLASH_SPI_CLKDIV 4
 #endif
 
+// pico_cmake_set_default PICO_FLASH_SIZE_BYTES = (2 * 1024 * 1024)
 #ifndef PICO_FLASH_SIZE_BYTES
 #define PICO_FLASH_SIZE_BYTES (2 * 1024 * 1024)
 #endif
-
-// Drive high to force power supply into PWM mode (lower ripple on 3V3 at light loads)
-#define PICO_SMPS_MODE_PIN 23
-
+// All boards have B1 RP2040
 #ifndef PICO_RP2040_B0_SUPPORTED
-#define PICO_RP2040_B0_SUPPORTED 1
+#define PICO_RP2040_B0_SUPPORTED  0
 #endif
-
-// Pin get VBUS
-#ifndef PICO_VBUS_PIN
-#define PICO_VBUS_PIN 24
-#endif
-
-// Pin used to monitor VSYS using ADC
-#ifndef PICO_VSYS_PIN
-#define PICO_VSYS_PIN 29
-#endif
-
 
 
 // --- Definitions for YAPicoprobe
 
-#define PICOPROBE_LED            PICO_DEFAULT_LED_PIN
+#define PICOPROBE_LED            7  // custom led because onboard requires too much processing
 
 // PIO config
 #define PROBE_PIO                pio0
@@ -109,7 +91,7 @@
 #define PROBE_PIN_SWCLK          (PROBE_PIN_OFFSET + 1) // 2
 #define PROBE_PIN_SWDIO          (PROBE_PIN_OFFSET + 2) // 3
 #define PROBE_PIN_RESET          6                      // Target reset config
-//#define PROBE_MAX_KHZ         now in g_board_info.target_cfg->rt_max_swd_kHz, setup in pico::pico_prerun_board_config()
+// #define PROBE_MAX_KHZ         now in g_board_info.target_cfg->rt_max_swd_kHz, setup in pico::pico_prerun_board_config()
 
 // UART config (UART target -> probe)
 #define PICOPROBE_UART_TX        4
@@ -131,7 +113,7 @@
 
 //Pin usage
 //GP0 and 1 are reserved for debug uart
-//GP2-GP22 are digital inputs
+//GP8-GP15 are digital inputs
 //GP23 controls power supply modes and is not a board input
 //GP24-25 are not on the board and not used
 //GP26-28 are ADC.
@@ -139,7 +121,7 @@
 // number of analog channels
 #define SR_NUM_A_CHAN            3
 // first digital channel port
-#define SR_BASE_D_CHAN           10
+#define SR_BASE_D_CHAN           8
 // number of digital channels
 #define SR_NUM_D_CHAN            8
 // Storage size of the DMA buffer.  The buffer is split into two halves so that when the first

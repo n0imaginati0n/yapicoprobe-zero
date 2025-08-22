@@ -114,7 +114,21 @@
     #define PROBE_MCU "rp2040"
 #endif
 
+#include "pico/binary_info.h"
+bi_decl(bi_1pin_with_name(PICO_DEFAULT_WS2812_PIN, "On-board digital RGB WS2812 LED"));
 
+bi_decl(bi_1pin_with_name(PROBE_PIN_SWDIR, "Transmission Direction Switcher"));
+bi_decl(bi_1pin_with_name(PROBE_PIN_SWCLK, "SWCLK"));
+bi_decl(bi_1pin_with_name(PROBE_PIN_SWDIO, "SWDIO"));
+bi_decl(bi_1pin_with_name(PROBE_PIN_RESET, "Target RST"));
+bi_decl(bi_1pin_with_name(PICOPROBE_LED, "Status LED"));
+bi_decl(bi_2pins_with_func(PICOPROBE_UART_TX, PICOPROBE_UART_RX, GPIO_FUNC_UART));
+
+#define PIN_MASK(base, count) (((1u << (count)) - 1) << (base))
+#ifndef PICO_RP2350
+    bi_decl(bi_pin_mask_with_name(PIN_MASK(26, SR_NUM_A_CHAN), "Analog Input channels"));
+#endif // PICO_RP2350
+bi_decl(bi_pin_mask_with_name(PIN_MASK(SR_BASE_D_CHAN, SR_BASE_D_CHAN), "Digital Input channels"));
 
 // maximum number of expected FreeRTOS task (used for uxTaskGetSystemState())
 #define TASK_MAX_CNT                15

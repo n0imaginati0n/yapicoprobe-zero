@@ -2,7 +2,7 @@
 #
 # Parameters
 # ----------
-# - PICO_BOARD                   pico|pico_w|pico2|pico_debug_probe, default "pico"
+# - PICO_BOARD                   pico|pico_w|pico2|pico_debug_probe|waveshare_rp2040_zero, default "pico"
 # - PICOPROBE_VERSION_MAJOR      major version number
 # - PICOPROBE_VERSION_MINOR      minor version number
 # - lot more options below
@@ -10,14 +10,61 @@
 # - GIT_HASH                     short git hash
 # - PROJECT                      project name for cmake
 #
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 
+
+set(default_MAJOR_VERSION "1")
+set(default_MINOR_VERSION "24")
+set(default_BOARD "waveshare_rp2040_zero")
+set(default_GIT_HASH "0xdeadbeef")
+set(default_PROJECT_NAME "yapicoprobe_zero")
 #
 # Compile options
 #
-if(PICO_BOARD STREQUAL "")
-    set(PICO_BOARD pico)
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE MinSizeRel CACHE STRING "Build type" FORCE)
 endif()
+
+if (NOT DEFINED PICOPROBE_VERSION_MAJOR)
+    set(PICOPROBE_VERSION_MAJOR "${default_MAJOR_VERSION}")
+endif()
+
+if (NOT DEFINED PICOPROBE_VERSION_MINOR)
+    set(PICOPROBE_VERSION_MINOR "${default_MINOR_VERSION}")
+endif()
+
+if(NOT DEFINED PICO_BOARD)
+    set(PICO_BOARD "${default_BOARD}" CACHE STRING "PICO board to use")
+endif()
+
+if (NOT DEFINED PROJECT_NAME)
+    set(PROJECT_NAME "${default_PROJECT_NAME}")
+endif()
+
+if (NOT DEFINED PROJECT)
+    set(PROJECT "${PROJECT_NAME}")
+endif()
+
+execute_process(
+    COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+if(GIT_HASH STREQUAL "")
+    set(GIT_HASH "${default_GIT_HASH}")
+endif()
+
+add_compile_definitions(
+    PICOPROBE_VERSION_MAJOR=${PICOPROBE_VERSION_MAJOR}
+    PICOPROBE_VERSION_MINOR=${PICOPROBE_VERSION_MINOR}
+    PROJECT=${PROJECT_NAME}
+    GIT_HASH="${GIT_HASH}"
+    PICO_BOARD="${PICO_BOARD}"
+)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     set(DEFAULT_OPT_PROBE_DEBUG_OUT "CDC")
 else()
@@ -49,6 +96,29 @@ set(OPT_NET_192_168            14 CACHE STRING "Set the subnet of 192.168.x")
 option(OPT_SPECIAL_CLK_FOR_PIO "Ignore clock frequency request of 1MHz (this is for PlatformIO tuning)" 0)
 
 
+message(STATUS "${PROJECT_NAME} ${PICOPROBE_VERSION_MAJOR}.${PICOPROBE_VERSION_MINOR} [${GIT_HASH}] for ${PICO_BOARD}")
+
+set(variable_names
+    PROJECT
+    OPT_CMSIS_DAPV1
+    OPT_CMSIS_DAPV2
+    OPT_TARGET_UART
+    OPT_PROBE_DEBUG_OUT
+    OPT_SIGROK
+    OPT_MSC
+    OPT_MSC_RAM_UF2
+    OPT_NET
+    OPT_NET_ECHO_SERVER
+    OPT_NET_IPERF_SERVER
+    OPT_NET_SYSVIEW_SERVER
+    OPT_CDC_SYSVIEW
+    OPT_SERIAL_CRLF
+    OPT_MCU_OVERCLOCK_MHZ
+    OPT_NET_192_168)
+foreach(var ${variable_names})
+    message(STATUS "${var}: ${${var}}")
+endforeach()
+
 #
 # enable LTO for clang release builds
 #
@@ -69,16 +139,14 @@ endif()
 
 #
 # CMSE must be disabled, otherwise FOR_TARGET_RP2040_CODE does not work
+#
 set(PICO_NO_CMSE true)
-
 
 #
 # below (and above) order is important
 #
-
 set(PICO_BOARD_HEADER_DIRS  ${CMAKE_CURRENT_LIST_DIR}/include/boards)
 include(pico_sdk_import.cmake)
-
 
 set(FREERTOS_KERNEL_PATH ${CMAKE_CURRENT_LIST_DIR}/freertos)
 include(FreeRTOS_Kernel_import.cmake)
@@ -88,27 +156,8 @@ pico_sdk_init()
 #    message("--------- " ${PICO_LWIP_PATH})
 #    message("--------- " ${PICO_LWIP_CONTRIB_PATH})
 #    message("--------- " ${PICO_TINYUSB_PATH})
-
-#
-# set some things inherited from Makefile / command line
-#
-if(PICOPROBE_VERSION_MAJOR)
-        add_definitions(-DPICOPROBE_VERSION_MAJOR=${PICOPROBE_VERSION_MAJOR})
-else()
-        set(PICOPROBE_VERSION_MAJOR 0)
-endif()
-if(PICOPROBE_VERSION_MINOR)
-        add_definitions(-DPICOPROBE_VERSION_MINOR=${PICOPROBE_VERSION_MINOR})
-else()
-        set(PICOPROBE_VERSION_MINOR 0)
-endif()
-
-project(${PROJECT}
-        VERSION ${PICOPROBE_VERSION_MAJOR}.${PICOPROBE_VERSION_MINOR}
-        DESCRIPTION "YAPicoprobe CMSIS-DAP"
-        HOMEPAGE_URL https://github.com/rgrr/yapicoprobe
-        LANGUAGES C CXX ASM
-)
+set (PROJECT_VERSION "${PICOPROBE_VERSION_MAJOR}.${PICOPROBE_VERSION_MINOR}")
+project(${PROJECT} VERSION ${PROJECT_VERSION} LANGUAGES C CXX ASM)
 
 string(TOUPPER ${PICO_BOARD} PICO_BOARD_UPPER)
 
@@ -468,3 +517,13 @@ endif()
 pico_set_binary_type(${PROJECT} default)
 
 pico_add_extra_outputs(${PROJECT})
+
+add_custom_command(TARGET ${PROJECT} POST_BUILD
+    COMMAND picotool info -a ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}.uf2
+    COMMENT "Running picotool on .uf2 file"
+)
+
+add_custom_command(TARGET ${PROJECT} POST_BUILD
+    COMMAND ${CMAKE_SOURCE_DIR}/calc_size.sh ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}.elf
+    COMMENT "calculate Flash and RAM size"
+)
