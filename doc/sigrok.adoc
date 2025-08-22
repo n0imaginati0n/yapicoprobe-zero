@@ -16,7 +16,6 @@ in the embedded area.
 This document holds some information about how to use sigrok after compiling it
 into your own YaPicoprobe.
 
- 
 
 ### Sigrok - Data Collection
 
@@ -48,3 +47,19 @@ Drawbacks:
 * for best performance digital channels must be assigned from GP10 consecutively
 * currently no hardware triggering supported
 
+### PulseView and sigroc-cli
+
+use nightly builds. AppImage works.
+
+* the driver: raspberrypi-pico
+* connection: serial port /dev/ttyACM1, the speed is not important as serial is CDC
+
+If something goes wrong, first try to check with sigrock-cli
+
+'''bash
+sigrok-cli --list-serial
+'''
+
+'''bash
+sigrok-cli  -l 2 -d raspberrypi-pico:conn=/dev/ttyACM1:serialcomm=115200/flow=0 --scan
+'''
