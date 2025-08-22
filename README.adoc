@@ -3,24 +3,30 @@
 :toc:
 :toclevels: 5
 
-# Yet Another Picoprobe
+# Yet Another Picoprobe Clone for RP2040 Zero
 
 ## Overview
 
-YAPicoprobe allows a Pico / RP2040 to be used as USB -> SWD and UART bridge. This means
-it can be used as a debugger and serial console for another Pico or any other SWD compatible controller.
+There is a chain of forks and clones which lead to this project. This time it was forked from 
+https://github.com/rgrr/yapicoprobe[YAPicoprobe]. And I want to say big thanks to it's author.
 
-YAPicoprobe is a fork of the original https://github.com/raspberrypi/picoprobe[Picoprobe]
-and was created due to my lazyness to follow the PR discussions and delays with unknown outcome.
+I don't plan to develop the code further, but want to write down what was done to get this 
+probe working. Basically I wanted something like a logic analyzer and analog tracker, 
+plus DAPLink to get it possible to program different devices based on ARM MCU.
 
-Another reason for this fork is that I wanted to play around with SWD, RTT, PIO etc pp, so
-the established development process was a little bit hindering.
+I switched off all the debug code - tty console, debug output. I switched off the 
+functionality related to segger SystemView - may be it is more stable, and can cover 
+many cases, but I like the Sigrok Pulseview and want to use it instead. 
 
-Finally there is **Y**et **A**nother **Picoprobe** around, the YAPicoprobe.
+One more reason was to use cheap small board called https://www.waveshare.com/wiki/RP2040-Zero[RP2040 Zero].
+It is much smaller, than original PI, buit still has enough pins for this application. And It has USB-C 
+on board. 
 
-NOTE: Pico2 / RP2350 can also be used as probe hardware.
-      This is an experimental feature.
-      
+[.text-center]
+image::RP2040-Zero.png[RP2040-Zero, 60%]
+
+Ah, yea, I removed a makefile from YAPicoprobe. This fork took configuration in the CMakeLists.txt file and 
+uses CMake only for build.
 
 ## Features
 
@@ -47,26 +53,6 @@ NOTE: Pico2 / RP2350 can also be used as probe hardware.
 ** auto detection of RP2040/RP2350/nRF52/Generic targets
 
 
-
-## Details
-### Known Devices
-* RP2040 (and its flash "win w25q16jv"), size of the targets flash is automatically detected
-* RP2350, size of the targets flash is (currently) fixed to 16MByte
-* nRF52832/833/840
-* other SWD compatible (Arm) devices with limitations in MSC access
-
-### Supported Probe Hardware
-* https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html[Raspberry Pi Pico, Pico W and Pico2] +
-  If you have to choose between a Pico and a Pico W, I'ld recommend the simple Pico, because Pico W does not
-  add any benefits
-* https://www.raspberrypi.com/documentation/microcontrollers/debug-probe.html[Pico Debug Probe]
-
-Other RP2040/RP2350 hardware will work as well, e.g. https://mcuoneclipse.com/2023/04/08/open-source-picolink-raspberry-pi-rp2040-cmsis-dap-debug-probe/[picoLink]
-is happy with the firmware image for the Pico.
-
-Firmware images can be downloaded from https://github.com/rgrr/yapicoprobe/releases[github].
-
-
 ### Probe / Target Wiring
 Wires between Pico probe and target board are shown below.  At least three wires (plus supply) are required:
 SWCLK, SWDIO and Gnd.  The Reset line is optional.  If target UART RX/TX are used, additional two wires are needed.
@@ -86,6 +72,16 @@ For details about probe pin assignments see the link:doc/hardware.adoc[hardware 
 Ochamodev wrote a nice https://github.com/ochamodev/raspberry_pico_setup_guide[setup guide],
 containing the steps from installation until debugging in VSCode. 
 
+### Possible schematics
+
+I've made this tool in iron. I'm not ready to offer a PCB now, but teh schematics itself is there:
+
+link:doc/extern/yapicoprobe-zero.pdf[Schematics]
+
+I've used LM324 OPAMP to make analogue inputs protected and have a possibility to shift zero level 
+for measuring 0-based signals. Additionally I've used two transistors to make TXD and RXD tolerate 
+to 3.3 and 5 volts. All of it not really precise, but works and LM324 can be mounted on socket to 
+change it in case of some burn.
 
 
 ### Tool Compatibility
@@ -257,6 +253,10 @@ a fix for > 3.50a, nevertheless TCP/IP is used...)
 
 
 ### LED Indications
+
+As the original RP2040-Zero board has a WS2812 RGB LED on board. And this LED managemnt is quite 
+sensitive to the timings, I don;t want to add more trouble to teh MCU as it was. And decide to use 
+simple additional LED as it was in YAPicoprobe.
 
 .LED Indications
 [%autowidth]
@@ -550,37 +550,46 @@ If you want to adopt YAPicoprobe options to your needs, check CMakeLists.txt and
 Requirements:
 
 * arm-none-eabi-gcc
-* make, cmake, ninja
+* cmake, ninja
 * Pico SDK
 
 .Clone yapicoprobe including submodules
 [source,bash]
 ----
-git clone https://github.com/rgrr/yapicoprobe.git
-cd yapicoprobe
+git clone https://github.com/n0imaginati0n/yapicoprobe-zero.git
+cd yapicoprobe-zero
 git submodule update --init --recursive
 ----
 
 .General build sequence
 [source,bash]
 ----
-# create _build/ninja.build for a debug target
-make cmake-create-debug
+# it is nice idea to keep all teh generated files in sepoarate dir. it will not pollute all the project
+# crewate build dir
+mkdir _build
 
-# build yapicoprobe, output in _build/picoprobe.uf2
-make all
+# switch to build dir
+cd _build
 
-# clean build files
-make clean
+# ask CMake to configure and generate buil scnarios for Ninja. I like Ninja, but one can use many 
+# other generators, like GNU Makefiles or MS VS. read CMake help
+cmake -G Ninja ..
+
+# ask CMake to build a project for you
+cmake --build .
+
+# got to the initial dir
+cd ..
 ----
 
-.Build sequence for a specific board [pico|pico_w|pico_debug_probe]
+.Build sequence for a specific board [pico|pico_w|pico_debug_probe|waveshare_rp2040_zero]
+
+all the same as before, but either you will specify CMake variable in the commandline at
 [source,bash]
 ----
-make clean-build
-make cmake-create-debug PICO_BOARD=pico_debug_probe
-make all
+cmake -G Ninja .. -DPICO_BOARD=pico_w -D<option>=<value> 
 ----
+or modify teh CmakeLists.txt file
 
 .Build firmware images for supported boards, images can be found in images/yapicoprobe*.uf2
 [source,bash]
@@ -588,19 +597,9 @@ make all
 make create-images
 ----
 
-.Bare call of cmake
-[source,bash]
-----
-mkdir _build; cd _build
-cmake .. -D<option>=<value> -DPICO_BOARD=pico_w
-cmake --build .
-# output in picoprobe.elf/uf2/hex/bin
-----
-
 If you want to know the several options use the one liner in the build directory:
 `cmake -LH . | sed -n -e '/OPT_/{x;1!p;g;$!N;p;D;}' -e h`. +
 Or use simply `make show-options` in the projects root.
-
 
 ### Code Inherited
 
